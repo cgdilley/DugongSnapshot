@@ -25,19 +25,24 @@ public class PhotoHandler implements Camera.PictureCallback
     @Override
     public void onPictureTaken(byte[] data, Camera camera)
     {
+        // Immediately restart the preview for the camera
         camera.startPreview();
 
+        // Get location of where to save the picture
         File pictureFileDir = getDir(context);
 
+        // Test for I/O errors
         if (!pictureFileDir.exists() && !pictureFileDir.mkdirs())
         {
             Log.d("[Image]", "Can't create directory to save image");
             return;
         }
 
+        // Generate the new picture file
         File file = new File(picPath);
 
         try {
+            // Save the picture data to file, and report success/failure
             FileOutputStream fos = new FileOutputStream(file);
             fos.write(data);
             fos.close();
@@ -49,6 +54,11 @@ public class PhotoHandler implements Camera.PictureCallback
 
     }
 
+    /** Identifies and returns the appropriate file storage location for pictures.
+     *
+     * @param context Context to use as basis for finding file directory
+     * @return File object referring to the picture directory
+     */
     public static File getDir(Context context)
     {
         File dir = context.getFilesDir();

@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.database.sqlite.SQLiteDatabase;
 import android.hardware.Camera;
 import android.location.Location;
@@ -39,10 +38,12 @@ public class CameraActivity extends Activity
     private SQLiteDatabase mDb;
     private DatabaseHandler mDbHelper;
 
-    private static int GPS_POLLING_FREQ = 100;  // in milliseconds
+    private static int GPS_POLLING_FREQ = 200;  // in milliseconds
     private static float GPS_ACCURACY = 10.0f;  // in meters
-    private static int GPS_TIMEOUT = 30000;     // in milliseconds
+    private static int GPS_TIMEOUT = 10000;     // in milliseconds
     private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyyMMddhhmmss");
+
+    private static int NULL_GPS = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -50,9 +51,11 @@ public class CameraActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
+        // Initialize database access
         mDbHelper = new DatabaseHandler(this);
         mDb = mDbHelper.getWritableDatabase();
 
+        // Initialize location manager (GPS)
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
         // Test for camera
@@ -62,6 +65,7 @@ public class CameraActivity extends Activity
         }
         else
         {
+            // Find the ID of the rear-facing camera.
             cameraId = findCamera();
             if (cameraId < 0)
             {
@@ -69,6 +73,7 @@ public class CameraActivity extends Activity
             }
             else
             {
+                // Open the camera and start the camera preview
                 camera = Camera.open(cameraId);
                 generatePreview();
             }
@@ -76,17 +81,31 @@ public class CameraActivity extends Activity
     }
 
     @Override
-    public void onConfigurationChanged(Configuration config)
+    protected void onPause()
     {
-        super.onConfigurationChanged(config);
-        adjustCameraOrientation();
+        // Suspend the camera when the activity is paused
+        if (camera != null)
+        {
+            preview.setCamera(null);
+            camera.release();
+            camera = null;
+        }
+        super.onPause();
     }
 
+    /** OnClick method for the shutter, redirecting to appropriate code.
+     *
+     * @param view Reference to View that was clicked
+     */
     public void onShutterClick(View view)
     {
         takePicture();
     }
 
+    /** Handles all actions associate with taking a picture with the camera, including collection
+     * of GPS and time data and saving to SQL database.
+     *
+     */
     private void takePicture()
     {
         // Get picture name and snap picture
@@ -98,11 +117,14 @@ public class CameraActivity extends Activity
         final Calendar time = Calendar.getInstance();
 
         // Get GPS Coordinates
+        final Location location = new Location(LocationManager.GPS_PROVIDER);
+        location.setAccuracy(NULL_GPS);
         locationListener = new LocationListener()
         {
             @Override
-            public void onLocationChanged(Location location)
+            public void onLocationChanged(Location newLocation)
             {
+                location.set(newLocation);
                 if (location.getAccuracy() <= GPS_ACCURACY)
                 {
                     addDataEntry(picPath, time, location);
@@ -129,6 +151,7 @@ public class CameraActivity extends Activity
             }
         };
 
+        // Start polling for location updates and attach the above listener
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, GPS_POLLING_FREQ, 0,
                                                locationListener);
 
@@ -138,39 +161,77 @@ public class CameraActivity extends Activity
             @Override
             public void run()
             {
-                locationManager.removeUpdates(locationListener);
-                Log.d("[GPS]", "Could not resolve location.");
+                if (location.getAccuracy() == NULL_GPS)
+                {
+                    locationManager.removeUpdates(locationListener);
+                    Log.d("[GPS]", "Could not resolve location.");
+                    addDataEntry(picPath, time, null);
+                }
+                else if (location.getAccuracy() > GPS_ACCURACY)
+                {
+                    locationManager.removeUpdates(locationListener);
+                    Log.d("[GPS]", "Could not get accurate measurement.  Settled for "
+                                   + Float.toString(location.getAccuracy()) + "m.");
+                    addDataEntry(picPath, time, location);
+                }
             }
         }, GPS_TIMEOUT, TimeUnit.MILLISECONDS);
 
-
     }
 
+
+    /** Adds values into SQL database.
+     *
+     * @param picPath Path of the saved picture
+     * @param time Time the picture was taken
+     * @param location All location information associated with the picture
+     */
     private void addDataEntry(String picPath, Calendar time, Location location)
     {
         ContentValues vals = new ContentValues();
 
-        double lat = location.getLatitude();
-        double longi = location.getLongitude();
+        String reportString;
+
+        // Format the time as a String for storage
         String timeString = DATE_FORMAT.format(time.getTime());
 
         vals.put(DatabaseHandler.PIC_PATH, picPath);
         vals.put(DatabaseHandler.TIME, timeString);
-        vals.put(DatabaseHandler.LATITUDE, lat);
-        vals.put(DatabaseHandler.LONGITUDE, longi);
+
+        // Location can be null if GPS could not resolve a location.  If not null, format and store
+        //  the location data
+        if (location != null)
+        {
+            double lat = location.getLatitude();
+            double longi = location.getLongitude();
+
+            vals.put(DatabaseHandler.LATITUDE, lat);
+            vals.put(DatabaseHandler.LONGITUDE, longi);
+
+            reportString = (new SimpleDateFormat("dd/MM/yyyy hh:mm:ss")
+                    .format(time.getTime())) + " - [" + Double.toString(lat) + "][" +
+                           Double.toString(longi) + "]";
+        }
+        else  // If location was null, submit without GPS data
+        {
+            reportString = (new SimpleDateFormat("dd/MM/yyyy hh:mm:ss")
+                    .format(time.getTime())) + " - [NO GPS DATA]";
+        }
+
+        // Insert the data into the database
         mDb.replace(DatabaseHandler.TABLE_NAME, null, vals);
 
-        Log.d("[Data]", (new SimpleDateFormat("yyyy/MM/dd hh:mm:ss")
-                .format(time.getTime())) + " - [" + Double.toString(lat) + "][" +
-                        Double.toString(longi) + "]");
 
-        Toast.makeText(getApplicationContext(), (new SimpleDateFormat("yyyy/MM/dd hh:mm:ss")
-                .format(time.getTime())) + " - [" + Double.toString(lat) + "][" +
-                Double.toString(longi)+"]", Toast.LENGTH_SHORT).show();
+        Log.d("[Data]", reportString);
+        Toast.makeText(getApplicationContext(), reportString, Toast.LENGTH_LONG).show();
 
 
     }
 
+    /** Identifies the rear-facing camera and returns the camera's ID.
+     *
+     * @return ID of the rear-facing camera.  Returns -1 if no such camera exists.
+     */
     private int findCamera()
     {
         int cameraId = -1;
@@ -190,10 +251,11 @@ public class CameraActivity extends Activity
         return cameraId;
     }
 
+    /** Initializes the preview View in the layout for displaying what the camera sees.
+     *
+     */
     private void generatePreview()
     {
-        adjustCameraOrientation();
-
         Camera.Parameters camParams = camera.getParameters();
         camParams.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
         camera.setParameters(camParams);
@@ -208,34 +270,5 @@ public class CameraActivity extends Activity
         layout.addView(preview, params);
     }
 
-    private void adjustCameraOrientation()
-    {
-        /*
-        Camera.CameraInfo info = new Camera.CameraInfo();
 
-        Camera.getCameraInfo(cameraId, info);
-        int rotation = getWindowManager().getDefaultDisplay().getRotation();
-        int degrees = 0;
-        switch (rotation) {
-        case Surface.ROTATION_0: degrees = 0; break;
-        case Surface.ROTATION_90: degrees = 90; break;
-        case Surface.ROTATION_180: degrees = 180; break;
-        case Surface.ROTATION_270: degrees = 270; break;
-        }
-
-        camera.setDisplayOrientation((info.orientation - degrees + 360)%360);
-        */
-    }
-
-    @Override
-    protected void onPause()
-    {
-        if (camera != null)
-        {
-            preview.setCamera(null);
-            camera.release();
-            camera = null;
-        }
-        super.onPause();
-    }
 }

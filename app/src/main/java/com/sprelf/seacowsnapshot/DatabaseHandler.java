@@ -31,7 +31,7 @@ public class DatabaseHandler extends SQLiteOpenHelper
             "CREATE TABLE " + TABLE_NAME + " ("
             + PIC_PATH + " TEXT PRIMARY KEY, "
             + TIME + " TEXT, "
-            + LATITUDE + " FLOAT"
+            + LATITUDE + " FLOAT, "
             + LONGITUDE + " FLOAT)";
 
     @Override
