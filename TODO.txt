@@ -1,0 +1,9 @@
+Delete button code if not needed
+
+Questions:
+ - Accuracy of measurements
+ - Format of data (picture type, size)
+ - Completeness of data
+ - Wifi or 3G data upload
+ - Access to database
+ - GPS background polling?
