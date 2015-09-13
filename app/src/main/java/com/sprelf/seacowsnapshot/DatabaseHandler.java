@@ -15,7 +15,8 @@ public class DatabaseHandler extends SQLiteOpenHelper
     final static String TIME = "data_time";
     final static String LATITUDE = "data_latitude";
     final static String LONGITUDE = "data_longitude";
-    final static String[] COLUMNS = { PIC_PATH, TIME, LATITUDE, LONGITUDE };
+    final static String SUBMITTED = "data_submitted";
+    final static String[] COLUMNS = { PIC_PATH, TIME, LATITUDE, LONGITUDE, SUBMITTED };
 
     final private static String NAME = "image_db";
     final private static Integer VERSION = 1;
@@ -32,7 +33,8 @@ public class DatabaseHandler extends SQLiteOpenHelper
             + PIC_PATH + " TEXT PRIMARY KEY, "
             + TIME + " TEXT, "
             + LATITUDE + " FLOAT, "
-            + LONGITUDE + " FLOAT)";
+            + LONGITUDE + " FLOAT, "
+            + SUBMITTED + " INTEGER)";
 
     @Override
     public void onCreate(SQLiteDatabase db) {

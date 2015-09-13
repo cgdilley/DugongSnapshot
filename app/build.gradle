@@ -22,4 +22,5 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:22.2.1'
+    compile files('libs/KiiCloudStorageSDK_release_v2.1.30_8debad4.jar')
 }

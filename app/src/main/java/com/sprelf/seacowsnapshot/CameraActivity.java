@@ -1,8 +1,12 @@
 package com.sprelf.seacowsnapshot;
 
 import android.app.Activity;
+
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.hardware.Camera;
@@ -39,9 +43,10 @@ public class CameraActivity extends Activity
     private DatabaseHandler mDbHelper;
 
     private static int GPS_POLLING_FREQ = 200;  // in milliseconds
-    private static float GPS_ACCURACY = 10.0f;  // in meters
+    private static float GPS_ACCURACY = 100.0f;  // in meters
     private static int GPS_TIMEOUT = 10000;     // in milliseconds
-    private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyyMMddhhmmss");
+
+    private static int INTERNET_POLLING_FREQ = 30 * 60;  // in seconds
 
     private static int NULL_GPS = -1;
 
@@ -51,12 +56,16 @@ public class CameraActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
+
         // Initialize database access
         mDbHelper = new DatabaseHandler(this);
         mDb = mDbHelper.getWritableDatabase();
 
         // Initialize location manager (GPS)
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+
+        // Start background service for uploading data
+        startUpdateService(this);
 
         // Test for camera
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA))
@@ -110,7 +119,7 @@ public class CameraActivity extends Activity
     {
         // Get picture name and snap picture
         final String picPath = PhotoHandler.getDir(this).getPath() + File.separator
-                               + DATE_FORMAT.format(new Date());
+                               + DugongSnapshot.DATE_FORMAT.format(new Date());
         camera.takePicture(null, null, new PhotoHandler(getApplicationContext(), picPath));
 
         // Get current time
@@ -193,28 +202,29 @@ public class CameraActivity extends Activity
         String reportString;
 
         // Format the time as a String for storage
-        String timeString = DATE_FORMAT.format(time.getTime());
+        String timeString = DugongSnapshot.DATE_FORMAT.format(time.getTime());
 
         vals.put(DatabaseHandler.PIC_PATH, picPath);
         vals.put(DatabaseHandler.TIME, timeString);
+        vals.put(DatabaseHandler.SUBMITTED, 0);
 
         // Location can be null if GPS could not resolve a location.  If not null, format and store
         //  the location data
         if (location != null)
         {
-            double lat = location.getLatitude();
+            double lati = location.getLatitude();
             double longi = location.getLongitude();
 
-            vals.put(DatabaseHandler.LATITUDE, lat);
+            vals.put(DatabaseHandler.LATITUDE, lati);
             vals.put(DatabaseHandler.LONGITUDE, longi);
 
-            reportString = (new SimpleDateFormat("dd/MM/yyyy hh:mm:ss")
-                    .format(time.getTime())) + " - [" + Double.toString(lat) + "][" +
+            reportString = (new SimpleDateFormat("dd/MM/yyyy HH:mm:ss")
+                    .format(time.getTime())) + " - [" + Double.toString(lati) + "][" +
                            Double.toString(longi) + "]";
         }
         else  // If location was null, submit without GPS data
         {
-            reportString = (new SimpleDateFormat("dd/MM/yyyy hh:mm:ss")
+            reportString = (new SimpleDateFormat("dd/MM/yyyy HH:mm:ss")
                     .format(time.getTime())) + " - [NO GPS DATA]";
         }
 
@@ -222,7 +232,7 @@ public class CameraActivity extends Activity
         mDb.replace(DatabaseHandler.TABLE_NAME, null, vals);
 
 
-        Log.d("[Data]", reportString);
+        Log.d("[Data]", "Data saved.\n" + reportString);
         Toast.makeText(getApplicationContext(), reportString, Toast.LENGTH_LONG).show();
 
 
@@ -268,6 +278,19 @@ public class CameraActivity extends Activity
         preview = new CameraPreview(this);
         preview.setCamera(camera);
         layout.addView(preview, params);
+    }
+
+    public static void startUpdateService(Context context) {
+        Intent updateIntent = new Intent(context, UploadReceiver.class);
+        PendingIntent pendingUpdateIntent = PendingIntent.getBroadcast(context, 0, updateIntent,
+                                                                       PendingIntent.FLAG_CANCEL_CURRENT);
+        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        Calendar time = Calendar.getInstance();
+        time.add(Calendar.SECOND, INTERNET_POLLING_FREQ);
+        //manager.set(AlarmManager.RTC, time.getTimeInMillis(), pendingUpdateIntent);
+        manager.setRepeating(AlarmManager.RTC, time.getTimeInMillis(), INTERNET_POLLING_FREQ * 1000,
+                             pendingUpdateIntent);
+        Log.d("[Upload]", "Upload service started.");
     }
 
 
