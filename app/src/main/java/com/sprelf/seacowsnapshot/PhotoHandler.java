@@ -2,6 +2,7 @@ package com.sprelf.seacowsnapshot;
 
 import android.content.Context;
 import android.hardware.Camera;
+import android.os.Environment;
 import android.util.Log;
 
 import java.io.File;
@@ -61,7 +62,8 @@ public class PhotoHandler implements Camera.PictureCallback
      */
     public static File getDir(Context context)
     {
-        File dir = context.getFilesDir();
-        return new File(dir, "SeaCowSnapshot");
+        File dir = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES).getAbsolutePath());
+        return new File(dir, "DugongSnapshot");
     }
 }

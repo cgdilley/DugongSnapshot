@@ -29,6 +29,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.Calendar;
@@ -106,13 +107,18 @@ public class UploadReceiver extends BroadcastReceiver
 
     }
 
+    /** Handles uploading of all data based by the Cursor to the Kii database.
+     *
+     * @param cursor Cursor containing data to upload
+     */
     private void performNetworkActivities(Cursor cursor)
     {
 
         Log.d("[Upload]", "Starting Kii connection and upload...");
 
         // Initialize Kii
-        Kii.initialize("1c4763d1", "1c4c1479ec42ae226c735f3cff8906bc", Kii.Site.SG);
+        Kii.initialize(DugongSnapshot.KII_APPID, DugongSnapshot.KII_APPKEY,
+                       DugongSnapshot.KII_SITE);
 
         // Get access token for this device's login
         SharedPreferences settings = context
@@ -226,7 +232,7 @@ public class UploadReceiver extends BroadcastReceiver
 
                 // Find the maximum quality that will fit inside the maximum file size by trying
                 //  lower and lower quality until it fits.
-                int compressStep = 10;
+                int compressStep = 10;  // Larger amount means faster, but less precise
                 int compressQuality = 100 + compressStep;
                 int streamLength = UPLOAD_IMAGE_MAX_SIZE;
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -247,9 +253,12 @@ public class UploadReceiver extends BroadcastReceiver
 
                 if (compressQuality > 0)
                 {
-                    Log.d("[Image Rescaling]", "Image scaled to " + streamLength + " bytes, "+
-                         "at quality " + compressQuality);
+                    Log.d("[Image Rescaling]", "Image scaled to " + streamLength + " bytes, " +
+                                               "at quality " + compressQuality);
                     object.set(PIC_KEY, stream.toByteArray());
+                    FileOutputStream fos = new FileOutputStream(picPath.replace(".jpg", "-SCALED.jpg"));
+                    fos.write(stream.toByteArray());
+                    fos.close();
                 }
                 else
                 {
@@ -259,8 +268,10 @@ public class UploadReceiver extends BroadcastReceiver
             } catch (FileNotFoundException e)
             {
                 Log.e("[Data]", e.getMessage());
-                e.printStackTrace();
+            } catch (IOException e) {
+                Log.e("[Data]", e.getMessage());
             }
+
 
 
 
@@ -277,6 +288,7 @@ public class UploadReceiver extends BroadcastReceiver
                     }
                     else
                     {
+                        // Mark entry in database as having been submitted.
                         ContentValues val = new ContentValues();
                         val.put(DatabaseHandler.SUBMITTED, 1);
                         mDb.update(DatabaseHandler.TABLE_NAME, val, DatabaseHandler.PIC_PATH

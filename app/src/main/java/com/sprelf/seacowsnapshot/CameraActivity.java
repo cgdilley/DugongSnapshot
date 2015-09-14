@@ -47,6 +47,8 @@ public class CameraActivity extends Activity
     private static int GPS_TIMEOUT = 10000;     // in milliseconds
 
     private static int INTERNET_POLLING_FREQ = 30 * 60;  // in seconds
+    private static int PENDINGINTENT_UPLOAD_ID = 1;
+    private static int PENDINGINTENT_TRACK_ID = 2;
 
     private static int NULL_GPS = -1;
 
@@ -102,7 +104,8 @@ public class CameraActivity extends Activity
         super.onPause();
     }
 
-    /** OnClick method for the shutter, redirecting to appropriate code.
+    /**
+     * OnClick method for the shutter, redirecting to appropriate code.
      *
      * @param view Reference to View that was clicked
      */
@@ -111,15 +114,15 @@ public class CameraActivity extends Activity
         takePicture();
     }
 
-    /** Handles all actions associate with taking a picture with the camera, including collection
+    /**
+     * Handles all actions associate with taking a picture with the camera, including collection
      * of GPS and time data and saving to SQL database.
-     *
      */
     private void takePicture()
     {
         // Get picture name and snap picture
         final String picPath = PhotoHandler.getDir(this).getPath() + File.separator
-                               + DugongSnapshot.DATE_FORMAT.format(new Date());
+                               + DugongSnapshot.DATE_FORMAT.format(new Date()) + ".jpg";
         camera.takePicture(null, null, new PhotoHandler(getApplicationContext(), picPath));
 
         // Get current time
@@ -189,10 +192,11 @@ public class CameraActivity extends Activity
     }
 
 
-    /** Adds values into SQL database.
+    /**
+     * Adds values into SQL database.
      *
-     * @param picPath Path of the saved picture
-     * @param time Time the picture was taken
+     * @param picPath  Path of the saved picture
+     * @param time     Time the picture was taken
      * @param location All location information associated with the picture
      */
     private void addDataEntry(String picPath, Calendar time, Location location)
@@ -232,13 +236,14 @@ public class CameraActivity extends Activity
         mDb.replace(DatabaseHandler.TABLE_NAME, null, vals);
 
 
-        Log.d("[Data]", "Data saved.\n" + reportString);
+        Log.d("[Data]", "Data saved. (" + reportString + ")");
         Toast.makeText(getApplicationContext(), reportString, Toast.LENGTH_LONG).show();
 
 
     }
 
-    /** Identifies the rear-facing camera and returns the camera's ID.
+    /**
+     * Identifies the rear-facing camera and returns the camera's ID.
      *
      * @return ID of the rear-facing camera.  Returns -1 if no such camera exists.
      */
@@ -261,8 +266,8 @@ public class CameraActivity extends Activity
         return cameraId;
     }
 
-    /** Initializes the preview View in the layout for displaying what the camera sees.
-     *
+    /**
+     * Initializes the preview View in the layout for displaying what the camera sees.
      */
     private void generatePreview()
     {
@@ -280,15 +285,25 @@ public class CameraActivity extends Activity
         layout.addView(preview, params);
     }
 
-    public static void startUpdateService(Context context) {
+    /** Starts the alarm service for periodically attempting to upload any data in the database.
+     *
+     * @param context Context within which to perform the operation.
+     */
+    public static void startUpdateService(Context context)
+    {
         Intent updateIntent = new Intent(context, UploadReceiver.class);
-        PendingIntent pendingUpdateIntent = PendingIntent.getBroadcast(context, 0, updateIntent,
-                                                                       PendingIntent.FLAG_CANCEL_CURRENT);
+        PendingIntent pendingUpdateIntent = PendingIntent
+                .getBroadcast(context,
+                              PENDINGINTENT_UPLOAD_ID,
+                              updateIntent,
+                              PendingIntent.FLAG_UPDATE_CURRENT);
         AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         Calendar time = Calendar.getInstance();
-        time.add(Calendar.SECOND, INTERNET_POLLING_FREQ);
-        //manager.set(AlarmManager.RTC, time.getTimeInMillis(), pendingUpdateIntent);
-        manager.setRepeating(AlarmManager.RTC, time.getTimeInMillis(), INTERNET_POLLING_FREQ * 1000,
+        //time.add(Calendar.SECOND, INTERNET_POLLING_FREQ);
+        //manager.set(AlarmManager.RTC_WAKEUP, time.getTimeInMillis(), pendingUpdateIntent);
+
+        // Creates an alarm that fires immediately, and then repeating at set intervals.
+        manager.setRepeating(AlarmManager.RTC_WAKEUP, time.getTimeInMillis(), INTERNET_POLLING_FREQ * 1000,
                              pendingUpdateIntent);
         Log.d("[Upload]", "Upload service started.");
     }
