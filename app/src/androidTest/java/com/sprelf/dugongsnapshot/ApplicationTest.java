@@ -1,4 +1,4 @@
-package com.sprelf.seacowsnapshot;
+package com.sprelf.dugongsnapshot;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

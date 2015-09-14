@@ -1,4 +1,4 @@
-package com.sprelf.seacowsnapshot;
+package com.sprelf.dugongsnapshot;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;

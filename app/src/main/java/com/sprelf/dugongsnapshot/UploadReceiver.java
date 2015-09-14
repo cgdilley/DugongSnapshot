@@ -1,4 +1,4 @@
-package com.sprelf.seacowsnapshot;
+package com.sprelf.dugongsnapshot;
 
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
@@ -29,7 +29,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.Calendar;
@@ -256,9 +255,11 @@ public class UploadReceiver extends BroadcastReceiver
                     Log.d("[Image Rescaling]", "Image scaled to " + streamLength + " bytes, " +
                                                "at quality " + compressQuality);
                     object.set(PIC_KEY, stream.toByteArray());
+                    /*
                     FileOutputStream fos = new FileOutputStream(picPath.replace(".jpg", "-SCALED.jpg"));
                     fos.write(stream.toByteArray());
                     fos.close();
+                    */
                 }
                 else
                 {

@@ -1,4 +1,4 @@
-package com.sprelf.seacowsnapshot;
+package com.sprelf.dugongsnapshot;
 
 import android.app.Activity;
 
@@ -20,7 +20,7 @@ import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-import com.sprelf.seacowsnapshot.CustomViews.CameraPreview;
+import com.sprelf.dugongsnapshot.CustomViews.CameraPreview;
 
 import java.io.File;
 import java.text.SimpleDateFormat;

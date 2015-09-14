@@ -1,4 +1,4 @@
-package com.sprelf.seacowsnapshot.CustomViews;
+package com.sprelf.dugongsnapshot.CustomViews;
 
 import android.content.Context;
 import android.hardware.Camera;
