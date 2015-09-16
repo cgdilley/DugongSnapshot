@@ -40,9 +40,9 @@ public class UploadReceiver extends BroadcastReceiver
     public static String GEOPOINT_KEY = "geopoint";
     public static String USER_KEY = "user";
 
-    public static int UPLOAD_IMAGE_MAX_WIDTH = 800;
-    public static int UPLOAD_IMAGE_MAX_HEIGHT = 450;
-    public static int UPLOAD_IMAGE_MAX_SIZE = 40000;
+    public static int UPLOAD_IMAGE_MAX_WIDTH = 800;  // in pixels
+    public static int UPLOAD_IMAGE_MAX_HEIGHT = 450; // in pixels
+    public static int UPLOAD_IMAGE_MAX_SIZE = 45000;  // in bytes
 
     private KiiUser user;
     private SQLiteDatabase mDb;
@@ -81,14 +81,19 @@ public class UploadReceiver extends BroadcastReceiver
                 {
 
                     // Retrieve all database elements that need to be submitted
-                    Cursor cursor = mDb.query(DatabaseHandler.TABLE_NAME, DatabaseHandler.COLUMNS,
-                                              DatabaseHandler.SUBMITTED + " = '0'",
-                                              null, null, null, null);
+                    Cursor dataCursor = mDb.query(DatabaseHandler.TABLE_NAME, DatabaseHandler.COLUMNS,
+                                                  DatabaseHandler.SUBMITTED + " = '0'",
+                                                  null, null, null, null);
+                    Cursor trackCursor = mDb.query(DatabaseHandler.TRACK_TABLE_NAME,
+                                                   DatabaseHandler.TRACK_COLUMNS,
+                                                   null, null, null, null, null);
 
-                    if (cursor.getCount() > 0) // If there are pending submissions, submit them.
+                    // If there are pending submissions, submit them.
+                    if (dataCursor.getCount() > 0 || trackCursor.getCount() > 0)
                     {
-                        Log.d("[Upload]", "Found "+cursor.getCount() + " entries to upload.");
-                        performNetworkActivities(cursor);
+                        Log.d("[Upload]", "Found " + dataCursor.getCount() + " data entries"
+                                          + " and " + trackCursor.getCount() + " tracking entries to upload.");
+                        performNetworkActivities(dataCursor, trackCursor);
                     }
                     else
                     {
@@ -106,11 +111,12 @@ public class UploadReceiver extends BroadcastReceiver
 
     }
 
-    /** Handles uploading of all data based by the Cursor to the Kii database.
+    /**
+     * Handles uploading of all data based by the Cursor to the Kii database.
      *
-     * @param cursor Cursor containing data to upload
+     * @param dataCursor Cursor containing data to upload
      */
-    private void performNetworkActivities(Cursor cursor)
+    private void performNetworkActivities(Cursor dataCursor, Cursor trackCursor)
     {
 
         Log.d("[Upload]", "Starting Kii connection and upload...");
@@ -131,8 +137,8 @@ public class UploadReceiver extends BroadcastReceiver
             {
                 user = KiiUser.registerAsPseudoUser(new UserFields());
                 accessToken = user.getAccessToken();
-                Log.d("[Kii]", "Logged in as new user.\nAccess token = "+accessToken
-                     + "\nUser ID = " + user.getID());
+                Log.d("[Kii]", "Logged in as new user.\nAccess token = " + accessToken
+                               + "\nUser ID = " + user.getID());
 
                 SharedPreferences.Editor editor = settings.edit();
                 editor.putString(DugongSnapshot.ACCESSTOKEN_KEY, accessToken);
@@ -153,7 +159,7 @@ public class UploadReceiver extends BroadcastReceiver
             {
                 KiiUser.loginWithToken(accessToken);
                 user = KiiUser.getCurrentUser();
-                Log.d("[Kii]", "Logged in as existing user.\nAccess token = "+accessToken
+                Log.d("[Kii]", "Logged in as existing user.\nAccess token = " + accessToken
                                + "\nUser ID = " + user.getID());
 
             } catch (IOException e)
@@ -169,17 +175,15 @@ public class UploadReceiver extends BroadcastReceiver
         }
 
 
-
-
         // Iterate through all results
-        while (cursor.moveToNext())
+        while (dataCursor.moveToNext())
         {
             KiiObject object = Kii.bucket(DugongSnapshot.DATA_BUCKET).object();
 
-            final String picPath = cursor.getString(cursor.getColumnIndex(DatabaseHandler.PIC_PATH));
-            String time = cursor.getString(cursor.getColumnIndex(DatabaseHandler.TIME));
-            float lati = cursor.getFloat(cursor.getColumnIndex(DatabaseHandler.LATITUDE));
-            float longi = cursor.getFloat(cursor.getColumnIndex(DatabaseHandler.LONGITUDE));
+            final String picPath = dataCursor.getString(dataCursor.getColumnIndex(DatabaseHandler.PIC_PATH));
+            String time = dataCursor.getString(dataCursor.getColumnIndex(DatabaseHandler.TIME));
+            float lati = dataCursor.getFloat(dataCursor.getColumnIndex(DatabaseHandler.LATITUDE));
+            float longi = dataCursor.getFloat(dataCursor.getColumnIndex(DatabaseHandler.LONGITUDE));
             GeoPoint geoPoint = new GeoPoint(lati, longi);
 
             // Break down the date and time data into a JSON object with fields representing
@@ -215,7 +219,7 @@ public class UploadReceiver extends BroadcastReceiver
             //  the byte array.
             try
             {
-                // Open the base image
+                // Open the base image.
                 File file = new File(picPath);
                 BitmapFactory.Options options = new BitmapFactory.Options();
                 options.inJustDecodeBounds = true;
@@ -237,10 +241,12 @@ public class UploadReceiver extends BroadcastReceiver
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
                 while (streamLength >= UPLOAD_IMAGE_MAX_SIZE && compressQuality > compressStep)
                 {
-                    try {
+                    try
+                    {
                         stream.flush();
                         stream.reset();
-                    } catch (IOException e) {
+                    } catch (IOException e)
+                    {
                         e.printStackTrace();
                     }
 
@@ -255,28 +261,86 @@ public class UploadReceiver extends BroadcastReceiver
                     Log.d("[Image Rescaling]", "Image scaled to " + streamLength + " bytes, " +
                                                "at quality " + compressQuality);
                     object.set(PIC_KEY, stream.toByteArray());
-                    /*
-                    FileOutputStream fos = new FileOutputStream(picPath.replace(".jpg", "-SCALED.jpg"));
-                    fos.write(stream.toByteArray());
-                    fos.close();
-                    */
                 }
                 else
                 {
                     Log.d("[Image Rescaling]", "Unable to scale image to appropriate size.");
                 }
 
+                // Save the object, and if successful, report success and mark data point as submitted.
+                object.save(new KiiObjectCallBack()
+                {
+                    @Override
+                    public void onSaveCompleted(int token, KiiObject object, Exception exception)
+                    {
+                        if (exception != null)
+                        {
+                            Log.e("[Data]", exception.getMessage());
+                            exception.printStackTrace();
+                        }
+                        else
+                        {
+                            // Mark entry in database as having been submitted.
+                            ContentValues val = new ContentValues();
+                            val.put(DatabaseHandler.SUBMITTED, 1);
+                            mDb.update(DatabaseHandler.TABLE_NAME, val, DatabaseHandler.PIC_PATH
+                                                                        + " = '" + picPath + "'", null);
+                            Log.d("[Upload]", "Image data upload successful.\n" + picPath);
+                        }
+                    }
+                });
+
             } catch (FileNotFoundException e)
             {
                 Log.e("[Data]", e.getMessage());
-            } catch (IOException e) {
+            } catch (IOException e)
+            {
                 Log.e("[Data]", e.getMessage());
             }
+        }
 
+        while (trackCursor.moveToNext())
+        {
+            KiiObject object = Kii.bucket(DugongSnapshot.TRACKING_BUCKET).object();
 
+            final String time = trackCursor.getString(trackCursor.getColumnIndex(
+                    DatabaseHandler.TRACK_TIME));
+            float lati = trackCursor.getFloat(trackCursor.getColumnIndex(
+                    DatabaseHandler.TRACK_LATITUDE));
+            float longi = trackCursor.getFloat(trackCursor.getColumnIndex(
+                    DatabaseHandler.TRACK_LONGITUDE));
+            GeoPoint geoPoint = new GeoPoint(lati, longi);
 
+            // Break down the date and time data into a JSON object with fields representing
+            //  the different denominations of time
+            Calendar calendar = Calendar.getInstance();
+            try
+            {
+                calendar.setTime(DugongSnapshot.DATE_FORMAT.parse(time));
 
-            // Save the object, and if successful,
+                JSONObject timeObject = new JSONObject();
+                timeObject.put("year", calendar.get(Calendar.YEAR));
+                timeObject.put("month", calendar.get(Calendar.MONTH));
+                timeObject.put("day", calendar.get(Calendar.DAY_OF_MONTH));
+                timeObject.put("hour", calendar.get(Calendar.HOUR_OF_DAY));
+                timeObject.put("minute", calendar.get(Calendar.MINUTE));
+                timeObject.put("second", calendar.get(Calendar.SECOND));
+
+                object.set(TIME_KEY, timeObject);
+            } catch (ParseException e)
+            {
+                Log.e("[Data]", e.getMessage());
+                e.printStackTrace();
+            } catch (JSONException e)
+            {
+                Log.e("[Data]", e.getMessage());
+                e.printStackTrace();
+            }
+
+            object.set(GEOPOINT_KEY, geoPoint);
+            object.set(USER_KEY, user.getID());
+
+            // Save the object, and if successful, report success and delete tracking entry.
             object.save(new KiiObjectCallBack()
             {
                 @Override
@@ -284,21 +348,23 @@ public class UploadReceiver extends BroadcastReceiver
                 {
                     if (exception != null)
                     {
-                        Log.e("[Data]", exception.getMessage());
+                        Log.e("[Upload]", exception.getMessage());
                         exception.printStackTrace();
                     }
                     else
                     {
-                        // Mark entry in database as having been submitted.
-                        ContentValues val = new ContentValues();
-                        val.put(DatabaseHandler.SUBMITTED, 1);
-                        mDb.update(DatabaseHandler.TABLE_NAME, val, DatabaseHandler.PIC_PATH
-                                                                    + " = '" + picPath + "'", null);
-                        Log.d("[Data]", "Data upload successful.\n" + picPath);
+                        // Delete tracking entry in database
+                        mDb.delete(DatabaseHandler.TRACK_TABLE_NAME,
+                                   DatabaseHandler.TRACK_TIME + " = " + time,
+                                   null);
+
+                        Log.d("[Upload]", "Tracking data upload successful.");
                     }
                 }
             });
         }
+
+
     }
 }
 

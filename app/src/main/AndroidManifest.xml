@@ -8,15 +8,16 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
-        android:name="com.sprelf.dugongsnapshot.DugongSnapshot"
+        android:name=".DugongSnapshot"
         android:allowBackup="true"
         android:icon="@drawable/icon"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" >
         <activity
-            android:name="com.sprelf.dugongsnapshot.CameraActivity"
+            android:name=".CameraActivity"
             android:label="@string/app_name"
             android:screenOrientation="landscape" >
             <intent-filter>
@@ -27,10 +28,35 @@
         </activity>
 
         <receiver
-            android:name="com.sprelf.dugongsnapshot.UploadReceiver"
+            android:name=".UploadReceiver"
             android:enabled="true"
             android:exported="true" >
         </receiver>
+        <receiver
+            android:name=".TrackingReceiver"
+            android:enabled="true"
+            android:exported="true" >
+        </receiver>
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".ImageTestActivity"
+            android:label="@string/title_activity_image_test"
+            android:screenOrientation="landscape" >
+        </activity>
+
+        <service
+            android:name=".GPSService"
+            android:enabled="true"
+            android:exported="true" >
+        </service>
     </application>
 
 </manifest>

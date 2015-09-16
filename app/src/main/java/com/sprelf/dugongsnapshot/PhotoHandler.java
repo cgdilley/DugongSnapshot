@@ -2,7 +2,6 @@ package com.sprelf.dugongsnapshot;
 
 import android.content.Context;
 import android.hardware.Camera;
-import android.os.Environment;
 import android.util.Log;
 
 import java.io.File;
@@ -30,7 +29,7 @@ public class PhotoHandler implements Camera.PictureCallback
         camera.startPreview();
 
         // Get location of where to save the picture
-        File pictureFileDir = getDir(context);
+        File pictureFileDir = DugongSnapshot.getDir(context);
 
         // Test for I/O errors
         if (!pictureFileDir.exists() && !pictureFileDir.mkdirs())
@@ -55,15 +54,5 @@ public class PhotoHandler implements Camera.PictureCallback
 
     }
 
-    /** Identifies and returns the appropriate file storage location for pictures.
-     *
-     * @param context Context to use as basis for finding file directory
-     * @return File object referring to the picture directory
-     */
-    public static File getDir(Context context)
-    {
-        File dir = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES).getAbsolutePath());
-        return new File(dir, "DugongSnapshot");
-    }
+
 }

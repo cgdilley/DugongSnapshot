@@ -18,6 +18,12 @@ public class DatabaseHandler extends SQLiteOpenHelper
     final static String SUBMITTED = "data_submitted";
     final static String[] COLUMNS = { PIC_PATH, TIME, LATITUDE, LONGITUDE, SUBMITTED };
 
+    final static String TRACK_TABLE_NAME = "tracking_data";
+    final static String TRACK_TIME = "track_time";
+    final static String TRACK_LATITUDE = "track_latitude";
+    final static String TRACK_LONGITUDE = "track_longitude";
+    final static String[] TRACK_COLUMNS = { TRACK_TIME, TRACK_LATITUDE, TRACK_LONGITUDE };
+
     final private static String NAME = "image_db";
     final private static Integer VERSION = 1;
     final private Context mContext;
@@ -36,9 +42,18 @@ public class DatabaseHandler extends SQLiteOpenHelper
             + LONGITUDE + " FLOAT, "
             + SUBMITTED + " INTEGER)";
 
+    final private static String CREATE_CMD_DATA2 =
+
+            "CREATE TABLE " + TRACK_TABLE_NAME + " ("
+            + TRACK_TIME + " TEXT PRIMARY KEY, "
+            + TRACK_LATITUDE + " FLOAT, "
+            + TRACK_LONGITUDE + " FLOAT)";
+
     @Override
-    public void onCreate(SQLiteDatabase db) {
+    public void onCreate(SQLiteDatabase db)
+    {
         db.execSQL(CREATE_CMD_DATA);
+        db.execSQL(CREATE_CMD_DATA2);
     }
 
 

@@ -1,10 +1,9 @@
-Add photo confirmation feedback
-GPS tracking
-Test images that have been uploaded to Kii
- ** Save images where they can be found later
-	- Currently can be access through phone's file manager, but cannot be seen on computer.
+
+
+Maybe to do:
+Add more photo confirmation feedback?
+Toggling of GPS tracking
 Automatic picture cleanup
-Fix crash on resume
 
 Potential features:
 Push notification based full picture query
