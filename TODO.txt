@@ -1,3 +1,5 @@
+Remove image viewing code
+Temporarily disable photo capture after photo is taken
 
 
 Maybe to do:

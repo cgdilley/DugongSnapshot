@@ -24,7 +24,12 @@ public class CameraActivity extends Activity
     private int cameraId = 0;
     private CameraPreview preview;
 
+    private long pictureTime = 0;
+
     private MediaPlayer mediaPlayer;
+
+    private static long PICTURE_DELAY = 10000;  // in milliseconds
+
 
 
     @Override
@@ -96,7 +101,11 @@ public class CameraActivity extends Activity
      */
     public void onShutterClick(View view)
     {
-        takePicture();
+        if (System.currentTimeMillis() - pictureTime >= PICTURE_DELAY)
+        {
+            takePicture();
+            pictureTime = System.currentTimeMillis();
+        }
     }
 
     /**
@@ -105,6 +114,8 @@ public class CameraActivity extends Activity
      */
     private void takePicture()
     {
+
+
         // Get picture name and snap picture
         final String picPath = DugongSnapshot.getDir(this).getPath() + File.separator
                                + DugongSnapshot.DATE_FORMAT.format(new Date()) + ".jpg";
