@@ -27,11 +27,12 @@ public class DugongSnapshot extends Application
 {
     public static String SHAREDPREFS_FILE = "sharedPrefs";
     public static String ACCESSTOKEN_KEY = "token";
+    public static String USERNAME_KEY = "username";
     public static String DATA_BUCKET = "DataPoints";
     public static String TRACKING_BUCKET = "TrackingPoints";
 
-    public static String KII_APPID = "1c4763d1";
-    public static String KII_APPKEY = "1c4c1479ec42ae226c735f3cff8906bc";
+    public static String KII_APPID = "e9c0c9b0";
+    public static String KII_APPKEY = "4069b895e50d7b670ef82a07da47aa98";
     public static Kii.Site KII_SITE = Kii.Site.SG;
 
     public static int GPS_POLLING_FREQ = 200;  // in milliseconds
@@ -104,6 +105,29 @@ public class DugongSnapshot extends Application
                              TRACKING_POLL_FREQ * 1000,
                              pendingUpdateIntent);
         Log.d("[Tracking]", "Tracking service started.");
+    }
+
+    /**
+     * Stop the tracking service.  Called when the application is forcefully closed.
+     *
+     * @param context
+     */
+    public static void stopTrackingService(Context context)
+    {
+        Intent intent = new Intent(context, TrackingReceiver.class);
+        PendingIntent sender = PendingIntent.getBroadcast(context, PENDINGINTENT_TRACK_ID, intent,
+                                                          PendingIntent.FLAG_CANCEL_CURRENT);
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(ALARM_SERVICE);
+
+        if (sender != null)
+        {
+            alarmManager.cancel(sender);
+            Log.d("[Tracking]", "Tracking service CANCELLED.");
+        }
+        else
+        {
+            Log.d("[Tracking]", "Attempted to cancel tracking, but could not identify service.");
+        }
     }
 
     /**

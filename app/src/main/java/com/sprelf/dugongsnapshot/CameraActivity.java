@@ -1,14 +1,21 @@
 package com.sprelf.dugongsnapshot;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
 import com.sprelf.dugongsnapshot.CustomViews.CameraPreview;
@@ -30,8 +37,6 @@ public class CameraActivity extends Activity
 
     private static long PICTURE_DELAY = 10000;  // in milliseconds
 
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -40,19 +45,26 @@ public class CameraActivity extends Activity
 
 
 
-
-
-
         // Start background service for uploading data
         DugongSnapshot.startUpdateService(this);
         DugongSnapshot.startTrackingService(this);
-
+        startService(new Intent(this, AppCloseService.class));
     }
 
     @Override
-    protected  void onResume()
+    protected void onResume()
     {
         super.onResume();
+
+        // Determine if user name for this device exists
+        SharedPreferences settings = getSharedPreferences(DugongSnapshot.SHAREDPREFS_FILE, 0);
+        String username = settings.getString(DugongSnapshot.USERNAME_KEY, null);
+
+        // If not, ask for a user name
+        if (username == null)
+        {
+            queryUsername();
+        }
 
         // Test for camera
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA))
@@ -93,7 +105,6 @@ public class CameraActivity extends Activity
     }
 
 
-
     /**
      * OnClick method for the shutter, redirecting to appropriate code.
      *
@@ -106,6 +117,49 @@ public class CameraActivity extends Activity
             takePicture();
             pictureTime = System.currentTimeMillis();
         }
+    }
+
+    /**
+     *
+     */
+    public void onChangeUserClick(View view)
+    {
+        queryUsername();
+    }
+
+    private void queryUsername()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Input name");
+
+        // Set up the input
+        final EditText input = new EditText(this);
+
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setView(input);
+
+        // Set up the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener()
+        {
+            @Override
+            public void onClick(DialogInterface dialog, int which)
+            {
+                SharedPreferences.Editor editor = getApplicationContext()
+                        .getSharedPreferences(DugongSnapshot.SHAREDPREFS_FILE, 0).edit();
+                editor.putString(DugongSnapshot.USERNAME_KEY, input.getText().toString());
+                editor.commit();
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener()
+        {
+            @Override
+            public void onClick(DialogInterface dialog, int which)
+            {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
     }
 
     /**
@@ -134,8 +188,8 @@ public class CameraActivity extends Activity
         startService(intent);
     }
 
-    /** Performs all actions for providing confirmation feedback on press of the shutter.
-     *
+    /**
+     * Performs all actions for providing confirmation feedback on press of the shutter.
      */
     private void shutterClick()
     {
@@ -143,8 +197,6 @@ public class CameraActivity extends Activity
         mediaPlayer = MediaPlayer.create(this, R.raw.camera_shutter_click_01);
         mediaPlayer.start();
     }
-
-
 
 
     /**
@@ -188,9 +240,10 @@ public class CameraActivity extends Activity
         preview = new CameraPreview(this);
         preview.setCamera(camera);
         layout.addView(preview, params);
+
+        ((Button) findViewById(R.id.Camera_Button)).bringToFront();
+        ((ImageView) findViewById(R.id.UsernameChange_Button)).bringToFront();
     }
-
-
 
 
 }

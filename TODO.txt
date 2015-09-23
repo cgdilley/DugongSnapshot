@@ -1,5 +1,10 @@
 Remove image viewing code
-Temporarily disable photo capture after photo is taken
+
+---
+Create new Kii login/database
+Kii first time log-in
+Image capture button
+Cancel tracking on app close
 
 
 Maybe to do:
@@ -9,3 +14,5 @@ Automatic picture cleanup
 
 Potential features:
 Push notification based full picture query
+
+9c7@glgl55%

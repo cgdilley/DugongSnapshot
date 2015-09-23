@@ -42,78 +42,83 @@ public class GPSService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
-        // Initialize location manager (GPS)
-        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
-        // Retrieve pic path and time data
-        picPath = intent.getStringExtra("picPath");
-        time = intent.getStringExtra("time");
-
-
-        final Location location = new Location(LocationManager.GPS_PROVIDER);
-        location.setAccuracy(DugongSnapshot.NULL_GPS);
-        locationListener = new LocationListener()
+        if (intent != null)
         {
-            @Override
-            public void onLocationChanged(Location newLocation)
+            // Initialize location manager (GPS)
+            locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+
+            // Retrieve pic path and time data
+            picPath = intent.getStringExtra("picPath");
+            time = intent.getStringExtra("time");
+
+
+            final Location location = new Location(LocationManager.GPS_PROVIDER);
+            location.setAccuracy(DugongSnapshot.NULL_GPS);
+            locationListener = new LocationListener()
             {
-                location.set(newLocation);
-                if (location.getAccuracy() <= DugongSnapshot.GPS_ACCURACY)
+                @Override
+                public void onLocationChanged(Location newLocation)
                 {
-                    DugongSnapshot.addDataEntry(getApplicationContext(), picPath, time, location);
-                    locationManager.removeUpdates(locationListener);
-                    stopSelf();
+                    location.set(newLocation);
+                    if (location.getAccuracy() <= DugongSnapshot.GPS_ACCURACY)
+                    {
+                        DugongSnapshot.addDataEntry(getApplicationContext(), picPath, time, location);
+                        locationManager.removeUpdates(locationListener);
+                        stopSelf();
+                    }
                 }
-            }
 
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras)
-            {
-
-            }
-
-            @Override
-            public void onProviderEnabled(String provider)
-            {
-
-            }
-
-            @Override
-            public void onProviderDisabled(String provider)
-            {
-
-            }
-        };
-
-        // Start polling for location updates and attach the above listener
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                                               DugongSnapshot.GPS_POLLING_FREQ,
-                                               0,
-                                               locationListener);
-
-        // Delayed runnable to kill GPS if it can't resolve.
-        Executors.newScheduledThreadPool(1).schedule(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                if (location.getAccuracy() == DugongSnapshot.NULL_GPS)
+                @Override
+                public void onStatusChanged(String provider, int status, Bundle extras)
                 {
-                    locationManager.removeUpdates(locationListener);
-                    Log.d("[GPS]", "Could not resolve location.");
-                    DugongSnapshot.addDataEntry(getApplicationContext(), picPath, time, null);
-                    stopSelf();
+
                 }
-                else if (location.getAccuracy() > DugongSnapshot.GPS_ACCURACY)
+
+                @Override
+                public void onProviderEnabled(String provider)
                 {
-                    locationManager.removeUpdates(locationListener);
-                    Log.d("[GPS]", "Could not get accurate measurement.  Settled for "
-                                   + Float.toString(location.getAccuracy()) + "m.");
-                    DugongSnapshot.addDataEntry(getApplicationContext(), picPath, time, location);
-                    stopSelf();
+
                 }
-            }
-        }, DugongSnapshot.GPS_TIMEOUT, TimeUnit.MILLISECONDS);
+
+                @Override
+                public void onProviderDisabled(String provider)
+                {
+
+                }
+            };
+
+            // Start polling for location updates and attach the above listener
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                                                   DugongSnapshot.GPS_POLLING_FREQ,
+                                                   0,
+                                                   locationListener);
+
+            // Delayed runnable to kill GPS if it can't resolve.
+            Executors.newScheduledThreadPool(1).schedule(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    if (location.getAccuracy() == DugongSnapshot.NULL_GPS)
+                    {
+                        locationManager.removeUpdates(locationListener);
+                        Log.d("[GPS]", "Could not resolve location.");
+                        DugongSnapshot.addDataEntry(getApplicationContext(), picPath, time, null);
+                        stopSelf();
+                    }
+                    else if (location.getAccuracy() > DugongSnapshot.GPS_ACCURACY)
+                    {
+                        locationManager.removeUpdates(locationListener);
+                        Log.d("[GPS]", "Could not get accurate measurement.  Settled for "
+                                       + Float.toString(location.getAccuracy()) + "m.");
+                        DugongSnapshot.addDataEntry(getApplicationContext(), picPath, time, location);
+                        stopSelf();
+                    }
+                }
+            }, DugongSnapshot.GPS_TIMEOUT, TimeUnit.MILLISECONDS);
+
+        }
 
         return START_STICKY;
     }

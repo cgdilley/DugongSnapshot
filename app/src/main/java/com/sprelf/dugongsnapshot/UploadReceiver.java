@@ -136,9 +136,22 @@ public class UploadReceiver extends BroadcastReceiver
             try
             {
                 user = KiiUser.registerAsPseudoUser(new UserFields());
-                accessToken = user.getAccessToken();
-                Log.d("[Kii]", "Logged in as new user.\nAccess token = " + accessToken
-                               + "\nUser ID = " + user.getID());
+
+                String username = settings.getString(DugongSnapshot.USERNAME_KEY, null);
+                if (username != null)
+                    user.setDisplayname(username);
+
+                if (user != null)
+                {
+                    accessToken = user.getAccessToken();
+                    Log.d("[Kii]", "Logged in as new user.\nAccess token = " + accessToken
+                                   + "\nUser ID = " + user.getID());
+                }
+                else
+                {
+                    Log.e("[Kii]", "Could not log in to Kii");
+                    return;
+                }
 
                 SharedPreferences.Editor editor = settings.edit();
                 editor.putString(DugongSnapshot.ACCESSTOKEN_KEY, accessToken);
@@ -159,6 +172,13 @@ public class UploadReceiver extends BroadcastReceiver
             {
                 KiiUser.loginWithToken(accessToken);
                 user = KiiUser.getCurrentUser();
+
+                if (user.getDisplayname() == null)
+                {
+                    String username = settings.getString(DugongSnapshot.USERNAME_KEY, null);
+                    if (username != null)
+                        user.setDisplayname(username);
+                }
                 Log.d("[Kii]", "Logged in as existing user.\nAccess token = " + accessToken
                                + "\nUser ID = " + user.getID());
 
@@ -212,8 +232,21 @@ public class UploadReceiver extends BroadcastReceiver
                 e.printStackTrace();
             }
 
+            // Add Lat/Long Coords
             object.set(GEOPOINT_KEY, geoPoint);
-            object.set(USER_KEY, user.getID());
+
+            // Add user ID and name
+            try {
+                JSONObject userObject = new JSONObject();
+                userObject.put("id", user.getID());
+                userObject.put("name", user.getDisplayname());
+
+
+                object.set(USER_KEY, userObject);
+            } catch (JSONException e) {
+                Log.e("[Data]", e.getMessage());
+                e.printStackTrace();
+            }
 
             // Load the image, convert it to PNG, and store
             //  the byte array.
@@ -337,8 +370,20 @@ public class UploadReceiver extends BroadcastReceiver
                 e.printStackTrace();
             }
 
+            // Add Lat/Long coordinates
             object.set(GEOPOINT_KEY, geoPoint);
-            object.set(USER_KEY, user.getID());
+
+            // Add user ID and name
+            try {
+                JSONObject userObject = new JSONObject();
+                userObject.put("id", user.getID());
+                userObject.put("name", user.getDisplayname());
+
+                object.set(USER_KEY, userObject);
+            } catch (JSONException e) {
+                Log.e("[Data]", e.getMessage());
+                e.printStackTrace();
+            }
 
             // Save the object, and if successful, report success and delete tracking entry.
             object.save(new KiiObjectCallBack()
