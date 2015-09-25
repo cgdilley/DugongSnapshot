@@ -1,10 +1,14 @@
 Remove image viewing code
 
----
+
+
+Done today:
 Create new Kii login/database
 Kii first time log-in
 Image capture button
 Cancel tracking on app close
+
+
 
 
 Maybe to do:
@@ -12,7 +16,10 @@ Add more photo confirmation feedback?
 Toggling of GPS tracking
 Automatic picture cleanup
 
+
+
 Potential features:
 Push notification based full picture query
 
-9c7@glgl55%
+
+
