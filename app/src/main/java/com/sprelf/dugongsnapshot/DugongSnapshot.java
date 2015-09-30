@@ -10,7 +10,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.os.Environment;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.kii.cloud.storage.Kii;
 
@@ -196,7 +195,6 @@ public class DugongSnapshot extends Application
 
 
             Log.d("[Data]", "Data saved. (" + reportString + ")");
-            Toast.makeText(context, reportString, Toast.LENGTH_LONG).show();
 
         } catch (ParseException e) { e.printStackTrace(); }
 
