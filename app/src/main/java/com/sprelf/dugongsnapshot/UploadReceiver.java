@@ -215,7 +215,7 @@ public class UploadReceiver extends BroadcastReceiver
 
                 JSONObject timeObject = new JSONObject();
                 timeObject.put("year", calendar.get(Calendar.YEAR));
-                timeObject.put("month", calendar.get(Calendar.MONTH));
+                timeObject.put("month", calendar.get(Calendar.MONTH)+1);
                 timeObject.put("day", calendar.get(Calendar.DAY_OF_MONTH));
                 timeObject.put("hour", calendar.get(Calendar.HOUR_OF_DAY));
                 timeObject.put("minute", calendar.get(Calendar.MINUTE));
@@ -353,7 +353,7 @@ public class UploadReceiver extends BroadcastReceiver
 
                 JSONObject timeObject = new JSONObject();
                 timeObject.put("year", calendar.get(Calendar.YEAR));
-                timeObject.put("month", calendar.get(Calendar.MONTH));
+                timeObject.put("month", calendar.get(Calendar.MONTH)+1);
                 timeObject.put("day", calendar.get(Calendar.DAY_OF_MONTH));
                 timeObject.put("hour", calendar.get(Calendar.HOUR_OF_DAY));
                 timeObject.put("minute", calendar.get(Calendar.MINUTE));

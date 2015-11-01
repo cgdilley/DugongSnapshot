@@ -34,9 +34,9 @@ public class DugongSnapshot extends Application
     public static String KII_APPKEY = "4069b895e50d7b670ef82a07da47aa98";
     public static Kii.Site KII_SITE = Kii.Site.SG;
 
-    public static int GPS_POLLING_FREQ = 200;  // in milliseconds
+    public static int GPS_POLLING_FREQ = 2000;  // in milliseconds
     public static float GPS_ACCURACY = 100.0f;  // in meters
-    public static int GPS_TIMEOUT = 10000;     // in milliseconds
+    public static int GPS_TIMEOUT = 180000;     // in milliseconds
     public static int NULL_GPS = -1;
 
     private static int INTERNET_POLLING_FREQ = 30 * 60;  // in seconds
